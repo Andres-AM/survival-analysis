@@ -38,7 +38,6 @@ Where the Y = outcome, depends on $Time$ and on the $Event$ (0 = NO, 1 = YES) :
 + 0 : the event didn't occured 
 + 1 : the event occured 
 
-
 \newpage
  
 # Survival function, Hazard & Hazard ratio
@@ -213,8 +212,6 @@ To visualize the survival at specific time, and confidence intervals.
 summary(km.model2)
 
 ```
-
-
 
 ## Kaplan-Meier curve with an X variable 
 
