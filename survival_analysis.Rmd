@@ -1,0 +1,133 @@
+# Title: Survival Analysis Tutorial using R
+
+## Introduction
+- Explain the concept and significance of survival analysis in research.
+- Highlight the applications of survival analysis in various fields.
+
+## Prerequisites
+- List the required R packages for survival analysis (e.g., `survival`, `survminer`, `ggplot2`).
+- Provide installation instructions for the packages if needed.
+
+## Dataset Description
+- Introduce the dataset used for the tutorial (e.g., clinical trial data, cohort study data).
+- Describe the variables included in the dataset, including survival time, event status, and covariates.
+
+## Data Preprocessing
+- Load the dataset into R.
+- Handle missing values in the dataset (e.g., imputation or exclusion).
+- Transform variables if necessary (e.g., log transformation, categorical variable encoding).
+- Check for data quality and consistency.
+
+## Kaplan-Meier Analysis
+1. Define the survival time and event status variables.
+
+
+
+
+```{r}
+source("libraries.R")
+
+# Generate a synthetic survival dataset
+set.seed(123)
+
+# Number of observations
+n <- 100
+
+# Generate survival times (months)
+time <- rexp(n, rate = 0.2) + 5
+
+# Generate event status (0 = censored, 1 = event occurred)
+event <- rep(1, n)
+event[sample(1:n, n * 0.2)] <- 0
+
+# Generate covariates
+covariate1 <- rnorm(n)
+covariate2 <- sample(0:1, n, replace = TRUE)
+covariate3 <- rpois(n, lambda = 2)
+
+# Create the dataset
+dataset <- data.frame(time = time, event = event, covariate1 = covariate1, covariate2 = covariate2, covariate3 = covariate3)
+
+# Print the first few rows of the dataset
+head(dataset)
+
+```
+
+
+```{r}
+
+# Define survival time and event status variables
+time <- dataset$survival_time
+event <- dataset$event_status
+
+```
+
+2. Compute and plot Kaplan-Meier survival curves for the overall dataset.
+
+```{r}
+
+# Compute Kaplan-Meier survival curves
+km_fit <- survfit(Surv(time, event) ~ 1)
+
+# Plot the overall survival curve
+ggsurvplot(km_fit, data = dataset, title = "Overall Survival Curve")
+
+```
+
+3. Stratify the survival curves by relevant covariates.
+
+```{r}
+# Stratify survival curves by a categorical covariate
+km_fit_stratified <- survfit(Surv(time, event) ~ covariate, data = dataset)
+
+# Plot stratified survival curves
+ggsurvplot(km_fit_stratified, data = dataset, title = "Stratified Survival Curves")
+
+```
+
+4. Interpret the survival curves and discuss any observed differences.
+
+
+## Log-Rank Test
+
+1. Perform a log-rank test to compare survival curves between different groups or categories.
+
+```{r}
+
+# Perform a log-rank test
+logrank_test <- survdiff(Surv(time, event) ~ group, data = dataset)
+
+# Print the test results
+summary(logrank_test)
+
+
+```
+
+2. Assess the p-value and interpret its significance.
+3. Visualize the results using a log-rank test plot.
+
+
+```{r}
+
+# Create a log-rank test plot
+ggsurvplot(logrank_test, data = dataset, title = "Log-Rank Test Plot")
+
+```
+
+## Cox Proportional Hazards Model
+
+1. Fit a Cox proportional hazards model to examine the relationship between covariates and survival time.
+
+```{r}
+
+# Fit a Cox proportional hazards model
+cox_model <- coxph(Surv(time, event) ~ covariate1 + covariate2, data = dataset)
+
+# Print the model summary
+summary(cox_model)
+
+```
+
+2. Assess the proportional hazards assumption.
+3. Interpret the estimated hazard ratios and their significance.
+4. Visualize the results using forest plots or coefficient plots.

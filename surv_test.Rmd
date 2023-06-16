@@ -1,0 +1,134 @@
+---
+title: "surv_test"
+output:
+  pdf_document: default
+  html_document: default
+date: "2023-06-16"
+---
+# Survival Analysis Tutorial using R
+## Introduction
+
+Survival analysis is a statistical method used to analyze time-to-event data, where the event of interest could be, for example, death, failure, or any other event that occurs over time. In this tutorial, we will cover the fundamental concepts of survival analysis and demonstrate how to perform survival analysis using R.
+
+### Prerequisites
+
+Before we begin, make sure you have the necessary R packages installed. We will be using the survival package for survival analysis, survminer for visualization, and dplyr for data manipulation. If you haven't installed these packages, you can do so using the following code:
+
+
+```{r,message=FALSE}
+# install.packages("survival")
+# install.packages("survminer")
+# install.packages("dplyr")
+
+source("libraries.R")
+
+```
+
+### Dataset Description
+
+For this tutorial, we will use a hypothetical dataset that contains the following variables:
+
++ time: The survival time in months.    
++ status: The event status, where 0 indicates censored and 1 indicates an event.  
++ age: The age of the subject at the start of the study.  
++ sex: The gender of the subject (male or female).  
++ treatment: The treatment group the subject belongs to (control or experimental).  
+
+### Data Preparation and Exploration
+
+Let's start by creating the dataset and exploring its structure.
+
+```{r}
+
+# Generate a synthetic survival dataset
+set.seed(123)
+
+# Number of observations
+n <- 200
+
+# Generate survival times (months)
+time <- rexp(n, rate = 0.2) + 5
+
+# Generate event status (0 = censored, 1 = event occurred)
+event <- rep(1, n)
+event[sample(1:n, n * 0.2)] <- 0
+
+# Generate covariates
+age <- rnorm(n, mean = 50, sd = 10)
+sex <- sample(c("Male", "Female"), n, replace = TRUE)
+treatment <- sample(c("Control", "Experimental"), n, replace = TRUE)
+
+# Create the dataset
+data <- data.frame(time = time, status = event, age = age, sex = sex, treatment = treatment)
+
+# Print the first few rows of the dataset
+head(data)
+
+
+```
+ 
+## Kaplan-Meier Estimator and Survival Curves
+
+The Kaplan-Meier estimator is a nonparametric method used to estimate the survival function from time-to-event data. We can plot survival curves using the survfit() and ggsurvplot() functions.
+
+```{r}
+# Fit the Kaplan-Meier estimator
+fit <- survfit(Surv(time, status) ~ 1, data = data)
+
+# Plot the overall survival curve
+ggsurvplot(fit, data = data, title = "Overall Survival Curve")
+
+```
+
+## Stratified Survival Curves
+
+We can also stratify the survival curves by different groups or covariates to analyze their impact on survival.
+
+```{r}
+
+# Stratify the survival curves by treatment group
+fit_stratified <- survfit(Surv(time, status) ~ treatment, data = data)
+
+# Plot the stratified survival curves
+ggsurvplot(fit_stratified, data = data, title = "Survival Curves by Treatment Group")
+
+```
+
+## Log-Rank Test
+
+The log-rank test is used to compare survival curves between different groups or categories. We can perform the log-rank test using the survdiff() function.
+
+```{r}
+
+
+# Perform the log-rank test
+test <- survdiff(Surv(time, status) ~ treatment, data = data)
+
+# Print the test results
+summary(test)
+
+```
+
+## Cox Proportional Hazards Model
+
+The Cox proportional hazards model is a widely used regression model in survival analysis. We can fit the Cox model using the coxph() function.
+
+```{r}
+
+# Fit the Cox proportional hazards model
+cox_model <- coxph(Surv(time, status) ~ age + sex + treatment, data = data)
+
+# Print the model summary
+summary(cox_model)
+
+```
+
+## Hazard Ratios and Significance
+
+The Cox model provides hazard ratios, which measure the relative risk of an event for different covariate levels. We can interpret the hazard ratios and their significance using the model coefficients.
+
+## Conclusion
+
+In this tutorial, we covered the fundamental concepts of survival analysis and demonstrated how to perform survival analysis using R. We explored the Kaplan-Meier estimator, stratified survival curves, log-rank test, and Cox proportional hazards model. Survival analysis is a powerful tool for analyzing time-to-event data and can provide valuable insights in various research fields.
+
+Remember to adapt the code and analysis to your specific dataset and research question. Happy analyzing!
