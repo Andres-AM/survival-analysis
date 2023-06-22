@@ -1,134 +1,141 @@
 ---
-title: "surv_test"
+title: "Title: Survival Analysis Tutorial with Practical Application in R using the ggsurvfit Package"
 output:
-  pdf_document: default
-  html_document: default
+  html_document:
+    toc: TRUE
 date: "2023-06-16"
 ---
-# Survival Analysis Tutorial using R
-## Introduction
-
-Survival analysis is a statistical method used to analyze time-to-event data, where the event of interest could be, for example, death, failure, or any other event that occurs over time. In this tutorial, we will cover the fundamental concepts of survival analysis and demonstrate how to perform survival analysis using R.
-
-### Prerequisites
-
-Before we begin, make sure you have the necessary R packages installed. We will be using the survival package for survival analysis, survminer for visualization, and dplyr for data manipulation. If you haven't installed these packages, you can do so using the following code:
 
 
-```{r,message=FALSE}
-# install.packages("survival")
-# install.packages("survminer")
-# install.packages("dplyr")
+# Introduction:
+Survival analysis is a statistical technique used to analyze the time until an event of interest occurs. It is commonly used in medical research, epidemiology, and other fields to study the time to death or failure in a population. In this tutorial, we will explore survival analysis using the ggsurvfit package in R. ggsurvfit is a powerful package that provides an easy-to-use interface for visualizing survival curves and conducting various survival analysis tasks.
 
-source("libraries.R")
-
-```
-
-### Dataset Description
-
-For this tutorial, we will use a hypothetical dataset that contains the following variables:
-
-+ time: The survival time in months.    
-+ status: The event status, where 0 indicates censored and 1 indicates an event.  
-+ age: The age of the subject at the start of the study.  
-+ sex: The gender of the subject (male or female).  
-+ treatment: The treatment group the subject belongs to (control or experimental).  
-
-### Data Preparation and Exploration
-
-Let's start by creating the dataset and exploring its structure.
+## Installing Required Packages:
+Before we begin, ensure that the ggsurvfit package and its dependencies are installed on your system. You can install the package using the following command:
 
 ```{r}
 
-# Generate a synthetic survival dataset
-set.seed(123)
+# install.packages("ggsurvfit")
 
-# Number of observations
-n <- 200
+```
 
-# Generate survival times (months)
-time <- rexp(n, rate = 0.2) + 5
+Let's load the necessary libraries into our R environment:
+Loading the Required Libraries:
 
-# Generate event status (0 = censored, 1 = event occurred)
-event <- rep(1, n)
-event[sample(1:n, n * 0.2)] <- 0
+```{r}
 
-# Generate covariates
-age <- rnorm(n, mean = 50, sd = 10)
-sex <- sample(c("Male", "Female"), n, replace = TRUE)
-treatment <- sample(c("Control", "Experimental"), n, replace = TRUE)
+library(survival)
+library(ggplot2)
+library(ggsurvfit)
 
-# Create the dataset
-data <- data.frame(time = time, status = event, age = age, sex = sex, treatment = treatment)
+```
 
-# Print the first few rows of the dataset
-head(data)
 
+
+## Understanding Survival Analysis:
+Survival analysis deals with time-to-event data, where the event can be death, failure, recovery, or any other event of interest. The key concepts in survival analysis include:
++ Survival Time: The time from the start of the observation to the occurrence of the event.
++ Survival Function: The probability that an individual survives beyond a certain time point.
++ Hazard Function: The instantaneous rate at which events occur given that the individual has survived up to a specific time.
+
+## Preparing the Data:
+For this tutorial, we will use the "lung" dataset from the survival package, which contains information about survival times of patients with advanced lung cancer. 
+ 
+```{r}
+
+lung1 <- survival::lung
+  
+str(lung1)
 
 ```
  
-## Kaplan-Meier Estimator and Survival Curves
-
-The Kaplan-Meier estimator is a nonparametric method used to estimate the survival function from time-to-event data. We can plot survival curves using the survfit() and ggsurvplot() functions.
+## Exploratory Data Analysis (EDA):
+Before diving into survival analysis, it is essential to explore and understand the data. Perform exploratory data analysis tasks such as summarizing the dataset, checking for missing values, and identifying any potential covariates.
 
 ```{r}
-# Fit the Kaplan-Meier estimator
-fit <- survfit(Surv(time, status) ~ 1, data = data)
 
-# Plot the overall survival curve
-ggsurvplot(fit, data = data, title = "Overall Survival Curve")
+lung1$sex <- ifelse(lung1$sex == 1, "male", "female")
+
+# Summary of the dataset
+summary(lung1)
+
+# Checking for missing values
+sum(is.na(lung1))
+
+# Exploring covariates
+# Example: Boxplot of survival time by treatment
+lung1 %>%
+  ggplot(aes(as.factor(sex), time)) +
+  geom_boxplot(aes(color = sex )) +
+  labs(x = "ph.ecog", y = "time") +
+  theme_minimal()
 
 ```
 
-## Stratified Survival Curves
 
-We can also stratify the survival curves by different groups or covariates to analyze their impact on survival.
+## Estimating Survival Curves:
+To estimate the survival curves, we can use the survfit() function from the survival package. The survfit() function takes a formula specifying the survival time and an optional grouping variable.
 
 ```{r}
 
-# Stratify the survival curves by treatment group
-fit_stratified <- survfit(Surv(time, status) ~ treatment, data = data)
-
-# Plot the stratified survival curves
-ggsurvplot(fit_stratified, data = data, title = "Survival Curves by Treatment Group")
+surv_fit <- survfit(Surv(time, status) ~ 1, data = lung1)
 
 ```
 
-## Log-Rank Test
 
-The log-rank test is used to compare survival curves between different groups or categories. We can perform the log-rank test using the survdiff() function.
+# Visualizing Survival Curves:
+The ggsurvfit package provides a convenient way to visualize survival curves using ggplot2. We can use the ggsurvplot() function to create survival plots with various customization options.
 
-```{r}
+```{r, fig.height=8}
 
+# survfit2() calculates the survival curves based on the time and status variables, grouped by the sex variable in the lung1 dataset
+# ggsurvfit() creates a basic survival plot using ggplot2
 
-# Perform the log-rank test
-test <- survdiff(Surv(time, status) ~ treatment, data = data)
-
-# Print the test results
-summary(test)
+survfit2(Surv(time, status) ~ sex, data = lung1) %>%
+  ggsurvfit() +  # Adds the survival curves to the plot
+  
+  add_confidence_interval() +  # Adds confidence intervals to the survival curves
+  
+  coord_cartesian(xlim = c(0, 900)) +  # Sets the x-axis limits from 0 to 900
+  
+  scale_y_continuous(
+    limits = c(0, 1),  # Sets the y-axis limits from 0 to 1
+    labels = scales::percent  # Formats y-axis labels as percentages
+  ) +
+  
+  scale_color_manual(values = c("#2584da", "#da7b25")) +  # Manually sets the colors for line colors
+  scale_fill_manual(values = c("#2584da", "#da7b25")) +  # Manually sets the colors for fill colors
+  
+  theme_minimal() +  # Applies a minimal theme to the plot
+  theme(legend.position = "bottom") +  # Sets the position of the legend to the bottom
+  
+  labs(
+    title = "Visualizing Survival Curves",  # Sets the plot title
+    y = "Percentage Survival",  # Sets the y-axis label
+    x = "Survival time in days"  # Sets the x-axis label
+  ) +
+  
+  add_risktable(risktable_group = 'risktable_stats', size = 3) +  # Adds a risk table to the plot
+  
+  scale_x_continuous(breaks = seq(from = 0, to = 1000, by = 100)) +  # Sets x-axis breaks at intervals of 100
+  
+  add_pvalue(caption = "Log-rank {p.value}")  # Adds a p-value for the log-rank test
 
 ```
 
-## Cox Proportional Hazards Model
-
-The Cox proportional hazards model is a widely used regression model in survival analysis. We can fit the Cox model using the coxph() function.
+# Cox Proportional Hazards Model:
+The Cox proportional hazards model is widely used in survival analysis to examine the relationship between survival time and covariates. We can fit the Cox model using the coxph() function.
 
 ```{r}
+# Fitting the Cox proportional hazards model
+cox_model <- coxph(Surv(time, status) ~ age + sex + ph.ecog, data = lung1)
 
-# Fit the Cox proportional hazards model
-cox_model <- coxph(Surv(time, status) ~ age + sex + treatment, data = data)
-
-# Print the model summary
+# Printing the model summary
 summary(cox_model)
 
 ```
 
-## Hazard Ratios and Significance
 
-The Cox model provides hazard ratios, which measure the relative risk of an event for different covariate levels. We can interpret the hazard ratios and their significance using the model coefficients.
-
-## Conclusion
-
-In this tutorial, we covered the fundamental concepts of survival analysis and demonstrated how to perform survival analysis using R. We explored the Kaplan-Meier estimator, stratified survival curves, log-rank test, and Cox proportional hazards model. Survival analysis is a powerful tool for analyzing time-to-event data and can provide valuable insights in various research fields.
-
-Remember to adapt the code and analysis to your specific dataset and research question. Happy analyzing!
+Conclusion:
+Survival analysis is a valuable technique for analyzing time-to-event data. In this tutorial, we explored survival analysis using the ggsurvfit package in R. We covered the estimation of survival curves, visualization of survival plots, and fitting a Cox proportional hazards model. By understanding and applying these techniques, you can gain valuable insights from your survival data.
+Remember to refer to the documentation and additional resources for more advanced topics, such as handling censored data, stratified survival analysis, and time-varying covariates.
