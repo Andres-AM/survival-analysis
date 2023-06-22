@@ -2,5 +2,5 @@
 survival-analysis
 
 ## Preview
-![Alt text](Images/Sans titre.jpg)
+![Alt text](Images/survival.jpg)
  
