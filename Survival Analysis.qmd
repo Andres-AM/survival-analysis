@@ -1,0 +1,412 @@
+---
+title: "Survival Analysis"
+format: html
+
+---
+
+\tableofcontents  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list = ls())
+```
+
+\newpage 
+# Introduction
+## Definition
+
+The **Survival analysis** also known as time-to-event analysis corresponds to a set of statistical approaches used to **predict the time until an event of interest occurs**.
+
+Most important concepts for this analysis: 
+
++ **Exposure** (clock starts), time zero of the analysis for this subject.
++ **Event** (clock stops), 
++ **Survival time or time-to-event**, (difference between time of Event and time of Exposure).
+
+A **Survival time** can be estimated in this examples:     
+
++ **Exposure** (Cancer diagnostic), Event (Death)
++ **Exposure** (Marriage), Event (Divorce)   
+
+The survival analysis is a method of descriptive statistics to study pre-existing data.    
+A **sample of observations** is defined to represent a **population**, for each sample, we will have a value of Exposure, Event, and Time to event.
+For example a group of 100 patients (observations) with cancer, are studied.   
+The Clock starts at the cancer diagnosis for each patient, and stops at the Event, the moment of death in this case.   
+
+## Censoring and truncation 
+
+**Censoring**: Censoring is the term used when we don't know the exact time-to-event for an included observation.
+
+There are 2 main types of censoring:  
+
++ **Right censoring** (time to event greater than a value): 
+this type of censoring could sometimes be informative when the censoring is actually correlated to the expected event (consequence). 
+An example of right censoring is a time-to-event that continues after the experiment (patient that is still alive a the end of the study).
++ **Left censoring** (time to event less than a value) : 
+This corresponds to an unknown Exposure time, the clock has already started therefore the time to event has a variability because of this unknown. 
+
+**Truncation** : Truncation is the term used for the removal of observation based on outliers time-to event values (time-to-event too low or too high). 
+
+There are 2 different types of truncation :
+
++ **left truncation** ( short time-to-event values, small values that where not measured )
++ **right truncation** ( long time-to-event values, large values that where not measured )
+
+The whole data set can be truncated, whereas data points can be censored.
+
+\newpage
+
+# Survival function, Hazard & Hazard ratio
+## The Survival function/Model
+
+survival function $S(t) = P(T>t)$ = Probability of Survival **beyond time t**.
+
+## Hazard  
+
+$Hazard(Haz) = P(T<t +d\:|\: T> t)$ = probability of dying in the next few seconds **given alive now**.
+
+For the Exponential survival model, the hazard function correspond to the rate of the exponential curve.
+
+## Hazard  Ratio
+
+$Hazard\:(HR) = \frac{Haz, x=1}{Haz, x = 0}$= relative ratio, 
+
+At a given instant in time someone who is exposed is "relative ratio" times more important to someone who is not.
+
+## Different models
+
+Two type of functions/models to illustrate the decrease in survival probability.
+
+S(t) is the survival function
+
++ **Kaplan-Meier survival model**  (non-parametric)
+  + Pros : Simple to interpret, can estimate S(t)
+  + Cons : No functional form (no mathematical function, because of steps), can not estimate hazard ratio  
+  
++ **Exponential survival model ** (parametric) 
+  + Pros : Can estimate the S(t), and Hazard ratio 
+  + Cons : Not always realistic, because assumes constant hazard ( death is not constant ) 
+
++ **Cox proportional Hazard model** (semi-parametric), sort of a combination of KM model and Exponential model
+  + Pros : Haz can fluctuate with time, Can estimate Hazard ratio
+  + Cons : Can not estimate S(t)
+
+## (to change location), Equation 
+
+Y = time-to-event 
+
+Where the Y = outcome, depends on $Time$ and on the $Event$ (0 = NO, 1 = YES) : 
+
++ 0 : the event didn't occured 
++ 1 : the event occured 
+
+\newpage
+
+# Survival analysis in R
+
+## Lung data set
+
+```{r, echo=TRUE, message=FALSE}
+
+library(tidyverse); library(survival); library(survminer); library(knitr)
+
+head(lung) %>% kable()
+
+```
+
+Data set description: 
+
++ inst: Institution code
++ time: Survival time in days
++ status: censoring status 1=censored, 2=dead
++ age: Age in years
++ sex: Male=1 Female=2
++ ph.ecog: ECOG performance score (0=good 5=dead)
++ ph.karno: Karnofsky performance score (bad=0-good=100) rated by physician
++ pat.karno: Karnofsky performance score as rated by patient
++ meal.cal: Calories consumed at meals
++ wt.loss: Weight loss in last six months
+
+\newpage 
+
+## Compute survival curves with survfit()
+
+The function survfit() [in survival package] can be used to compute kaplan-Meier survival estimate. Its main arguments include:
+
++ a survival object created using the function Surv()
++ and the data set containing the variables.
+
+```{r, echo=TRUE, message=FALSE}
+
+fit <- survfit(Surv(time, status) ~ sex, data = lung)
+print(fit)
+
+```
+
+### Access to the value returned by survfit()
+
+The function survfit() returns a list of variables, including the following components:
+
++ n: total number of subjects in each curve.
++ time: the time points on the curve.
++ n.risk: the number of subjects at risk at time t
++ n.event: the number of events that occurred at time t.
++ n.censor: the number of censored subjects, who exit the risk set, without an event, at time t.
++ lower,upper: lower and upper confidence limits for the curve, respectively.
++ strata: indicates stratification of curve estimation. If strata is not NULL, there are multiple curves in the result. The levels of strata (a factor) are the labels for the curves.
+
+```{r, echo=TRUE, message=FALSE}
+
+fit <- survfit(Surv(time, status) ~ sex, data = lung)
+print(fit)
+
+d <- data.frame(time = fit$time,
+                  n.risk = fit$n.risk,
+                  n.event = fit$n.event,
+                  n.censor = fit$n.censor,
+                  surv = fit$surv,
+                  upper = fit$upper,
+                  lower = fit$lower
+                  )
+head(d) %>% kable()
+
+```
+
+The events and the median for both groups are displayed.
+
+\newpage
+
+### Visualize survival curves
+
+We’ll use the function ggsurvplot() [in Survminer R package] to produce the survival curves for the two groups of subjects.
+
+```{r, fig.height=5,fig.align="c"}
+ggsurvplot(
+  fit,
+  pval = TRUE, # p-value of the Log-Rank test comparing the groups using pval = TRUE
+  conf.int = TRUE, # the 95% confidence limits 
+  risk.table = TRUE, # Add risk table, 
+                     # the number and/or the percentage of individuals at risk by time 
+  risk.table.col = "strata", # Change risk table color by groups
+  linetype = "strata", # Change line type by groups
+  surv.median.line = "hv", # Specify median survival, horizontal/vertical line 
+  ggtheme = theme_bw(), # Change ggplot2 theme
+  palette = c("#E7B800", "#2E9FDF")
+)
+```
+
+\newpage 
+
+## Log-Rank test comparing survival curves: survdiff()
+
+The log-rank test is the most widely used method of comparing two or more survival curves and assesses whether the KM survival curves from two subpopulation are significantly different.   
+The null hypothesis is that there is no difference in survival between the two groups :   
+
++ $H_0$: survival in two groups is **the same**.
++ $H_1$: survival in the two groups is  **not the same**.     
+
+The log-rank test is a non-parametric test, which makes no assumptions about the survival distributions. Essentially, the log rank test compares the observed number of events in each group to what would be expected if the null hypothesis were true (i.e., if the survival curves were identical). The log rank statistic is approximately distributed as a chi-square test statistic.   
+
+The function survdiff() [in survival package] can be used to compute log-rank test comparing two or more survival curves.   
+survdiff() can be used as follow:
+
+```{r}
+
+surv_diff <- survdiff(Surv(time, status) ~ sex, data = lung)
+surv_diff
+
+```
+
+The function returns a list of components, including:
+
++ n: the number of subjects in each group.
++ obs: the weighted observed number of events in each group.
++ exp: the weighted expected number of events in each group.
++ chisq: the chisquare statistic for a test of equality.
++ strata: optionally, the number of subjects contained in each stratum.
+
+The log rank test for difference in survival gives a p-value of p = 0.0013, indicating that the sex groups differ significantly in survival.
+
+\newpage
+
+# Old part 
+
+
+```{r, echo=TRUE}
+
+time   <- c(2,4,6,8,11,15,16,18,18,20,22,22,25,27,28,32,32,34,34)
+death  <- c(1,1,0,1,1,1,1,0,0,1,0,1,1,1,1,0,1,0,0) # Censoring or not, 1 = died, 0 = censored 
+over40 <- c(1,1,0,1,1,1,1,0,0,1,0,1,0,1,1,0,1,1,0)   # Is over 40 or not, 1 = YES, 0 = NO 
+
+df <- tibble(time,death,over40)
+
+# We use ~1 when there is no X variable ( additional categorical variable )
+km.model <- survfit(Surv(time = time, event = death) ~ 1, 
+                    type = "kaplan-meier")  # Kaplan-Meier is the default value 
+
+km.model
+
+```
+
+To visualize the survival at specific time, and confidence intervals.
+
+```{r}
+
+summary(km.model)
+
+```
+
+
+## Kaplan-Meier curve
+
+```{r}
+plot(
+  km.model,    # used model 
+  conf.int = T,   # include confidence intervals 
+  xlab = "Time (months)", 
+  ylab = "% Alive = S(t)",
+  main = "KM-Model",
+  las = 1,       # rotatates the values on the y axis for better readability 
+  mark.time = T  # adds the censored values to the graph as a tick
+  )
+
+abline(h = 0.5, col = "red")
+```
+
+
+ 
+
+ 
+## Kaplan-Meier survival model
+
+Also known as Product-Limit Method, or the life table method. 
+
+This is a non-parametric curve, explains the selected data. The ticks are censored data 
+
+![Kaplan Meier Curve](Images/KMCurve.png){.class width=100% height=100%}
+
+\newpage 
+
+# Kaplan Meier Model in R 
+
+
+\newpage
+
+## Kaplan-Meier model with an X variable
+
+## Summary 
+
+```{r}
+
+# We use ~1 when there is no X variable ( additional categorical variable )
+km.model2 <- survfit(Surv(time = time, event = death) ~ over40, 
+                    type = "kaplan-meier")  # Kaplan-Meier is the default value 
+
+km.model2 
+
+```
+
+To visualize the survival at specific time, and confidence intervals.
+
+```{r}
+
+summary(km.model2)
+
+```
+
+
+
+## Kaplan-Meier curve with an X variable 
+
+```{r}
+
+plot(
+  km.model2,    # used model 
+  conf.int = F,   # include confidence intervals 
+  xlab = "Time (months)", 
+  ylab = "% Alive = S(t)",
+  main = "KM-Model",
+  col = c("red","blue"),   # add colors to the plots
+  lwd = 2,       # makes the line a bit more thick
+  las = 1,       # rotatates the values on the y axis for better readability 
+  mark.time = T  # adds the censored values to the graph as a tick
+  )
+
+legend(26,    # x coordinate for the box
+       1,     # y coordinate for the box
+       legend = c("under40","over40"),  # Names for the legend 
+       lty = 1, # linetype
+       lwd = 2, # linewidth
+       col = c("red","blue"), 
+       bty = "",  # boxtype shape
+       cex = 1    # boxfont size
+       )
+
+```
+
+## The LOG-RANK-TEST
+
+The log-rank test assesses whether the KM survival curves from two subpopulation are significantly different.
+Comparing the survival curves to see if they are different.
+
+$H_0$: surivival in two groups is **the same**.   
+$H_1$: survival in the two groups is  **not the same**.   
+
+
+```{r}
+
+survdiff(Surv(time,death)~ over40) # This can work with also more than 2 levels ( )
+
+```
+
+## Exemple of plot with ggplot2
+
+```{r}
+
+km.model2 <- survfit(Surv(time = time, event = death) ~ over40, 
+                    type = "kaplan-meier")  # Kaplan-Meier is the default value 
+
+p <- survminer::ggsurvplot(fit = km.model2,data = df)
+
+p
+
+```
+
+
+ 
+\newpage 
+
+# Life tables 
+
+## Definitions
+
+Life tables illustrate the pattern of survivorship of a population by considering the probability of death at each consecutive age. 
+
+![Life Table](Images/LifeTable.png){.class width=100% height=100%}
+Input : 
+
++ population by age group
++ deaths in each age group
+
+Output : 
+
++ the survival functions at each age 
++ conditional life expectancy at each age ( probability of being alive)
++ median, mean quantile survival
+
+\newpage 
+
+# Kaplan-Meier Curves and Log-rank Test
+
+## Calculating the steps 
+ 
+It's a **non-parametric** estimator of survival.
+Doesn't have an estimator ( like the mean or the standard deviation for an normal distribution ). A Kaplan-Meier curve looks more like steps than a curve, and doesn't use parameters, it represents the data.
+
+![Survival Table](Images/SurvivalTable.png){.class width=75% height=75%}
+
+![Survival Curve](Images/SurvivalCurve.png){.class width=75% height=75%}
+
+
+
+
