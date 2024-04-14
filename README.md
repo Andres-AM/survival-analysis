@@ -4,5 +4,5 @@ The following is a brief overview of a step-by-step survival analysis conducted 
 
 ## Preview
 
-![Alt text](Images/survival.jpg)
+![Survival Curve](Images/survival.jpg)
  
