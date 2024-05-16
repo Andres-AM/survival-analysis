@@ -20,16 +20,24 @@ Before we begin, ensure that the ggsurvfit package and its dependencies are inst
 Let's load the necessary libraries into our R environment: Loading the Required Libraries:
 
 ```{r}
+#| echo: false
+#| message: false
 
+library(tidyverse)
+library(knitr)
+library(plotly)
 library(survival)
-library(ggplot2)
 library(ggsurvfit)
 
 ```
 
 ## Understanding Survival Analysis:
 
-Survival analysis deals with time-to-event data, where the event can be death, failure, recovery, or any other event of interest. The key concepts in survival analysis include: + Survival Time: The time from the start of the observation to the occurrence of the event. + Survival Function: The probability that an individual survives beyond a certain time point. + Hazard Function: The instantaneous rate at which events occur given that the individual has survived up to a specific time.
+Survival analysis deals with time-to-event data, where the event can be death, failure, recovery, or any other event of interest. The key concepts in survival analysis include:  
+
++ Survival Time: The time from the start of the observation to the occurrence of the event. 
++ Survival Function: The probability that an individual survives beyond a certain time point. 
++ Hazard Function: The instantaneous rate at which events occur given that the individual has survived up to a specific time.
 
 ## Preparing the Data:
 
@@ -51,19 +59,32 @@ Before diving into survival analysis, it is essential to explore and understand 
 
 lung1$sex <- ifelse(lung1$sex == 1, "male", "female")
 
-# Summary of the dataset
-summary(lung1)
-
 # Checking for missing values
 sum(is.na(lung1))
 
+
+# Summary of the dataset
+lung1 %>% 
+  group_by(sex) %>% 
+  summarise(n = n(),
+            mean = mean(time), 
+            median = median(time),
+            sd = sd(time), 
+            min = min(time), 
+            max = max(time)
+            ) %>% 
+  kable()
+
 # Exploring covariates
 # Example: Boxplot of survival time by treatment
-lung1 %>%
-  ggplot(aes(as.factor(sex), time)) +
-  geom_boxplot(aes(color = sex )) +
+p <- lung1 %>%
+  ggplot(aes(as.factor(sex), time,color = sex )) +
+  geom_boxplot() +
+  # geom_jitter(height =  0,width = 0.2,alpha = .4)+ 
   labs(x = "ph.ecog", y = "time") +
   theme_minimal()
+
+plotly::ggplotly(p)
 
 ```
 
@@ -87,34 +108,46 @@ The ggsurvfit package provides a convenient way to visualize survival curves usi
 # ggsurvfit() creates a basic survival plot using ggplot2
 
 survfit2(Surv(time, status) ~ sex, data = lung1) %>%
-  ggsurvfit() +  # Adds the survival curves to the plot
   
-  add_confidence_interval() +  # Adds confidence intervals to the survival curves
+  # Adds the survival curves to the plot
+  ggsurvfit() + 
   
-  coord_cartesian(xlim = c(0, 900)) +  # Sets the x-axis limits from 0 to 900
+  # Adds confidence intervals to the survival curves
+  add_confidence_interval() +  
   
+  # Sets the x-axis limits from 0 to 900
+  coord_cartesian(xlim = c(0, 900)) +  
+  
+  # Sets the y-axis limits from 0 to 1 and Formats y-axis labels as percentages
   scale_y_continuous(
-    limits = c(0, 1),  # Sets the y-axis limits from 0 to 1
-    labels = scales::percent  # Formats y-axis labels as percentages
+    limits = c(0, 1), 
+    labels = scales::percent  
   ) +
+  # Manually sets the colors for line colors
+  scale_color_manual(values = c("#2584da", "#da7b25")) +  
+  scale_fill_manual(values = c("#2584da", "#da7b25")) +   
   
-  scale_color_manual(values = c("#2584da", "#da7b25")) +  # Manually sets the colors for line colors
-  scale_fill_manual(values = c("#2584da", "#da7b25")) +  # Manually sets the colors for fill colors
+  # Applies a minimal theme to the plot
+  # Sets the position of the legend to the bottom
+  theme_minimal() +  
+  theme(legend.position = "bottom") +  
   
-  theme_minimal() +  # Applies a minimal theme to the plot
-  theme(legend.position = "bottom") +  # Sets the position of the legend to the bottom
-  
+  # Sets the plot title and the y-axis and x-axis label
   labs(
-    title = "Visualizing Survival Curves",  # Sets the plot title
-    y = "Percentage Survival",  # Sets the y-axis label
-    x = "Survival time in days"  # Sets the x-axis label
+    title = "Visualizing Survival Curves", 
+    y = "Percentage Survival",  
+    x = "Survival time in days" 
   ) +
   
-  add_risktable(risktable_group = 'risktable_stats', size = 3) +  # Adds a risk table to the plot
+  # Adds a risk table to the plot
+  add_risktable(risktable_group = 'risktable_stats', size = 3) +  
   
-  scale_x_continuous(breaks = seq(from = 0, to = 1000, by = 100)) +  # Sets x-axis breaks at intervals of 100
+  # Sets x-axis breaks at intervals of 100
+  scale_x_continuous(breaks = seq(from = 0, to = 1000, by = 100)) +  
   
-  add_pvalue(caption = "Log-rank {p.value}")  # Adds a p-value for the log-rank test
+  # Adds a p-value for the log-rank test
+  add_pvalue(caption = "Log-rank {p.value}")  
+
 
 ```
 
@@ -127,7 +160,7 @@ The Cox proportional hazards model is widely used in survival analysis to examin
 cox_model <- coxph(Surv(time, status) ~ age + sex + ph.ecog, data = lung1)
 
 # Printing the model summary
-summary(cox_model)
+summary(cox_model)  
 
 ```
 

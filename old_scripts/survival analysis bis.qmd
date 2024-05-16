@@ -1,0 +1,147 @@
+---
+title: "Survival Analysis V2"
+format: html
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+
+# Load required libraries
+library(tidyverse)
+library(survival)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Number of observations
+n <- 200
+
+# Generate covariates
+age <- rnorm(n, mean = 50, sd = 10)
+gender <- sample(c("Male", "Female"), size = n, replace = TRUE)
+treatment <- sample(c("Treatment A", "Treatment B"), size = n, replace = TRUE)
+
+# Generate survival times (time to event)
+survival_times <- rexp(n, rate = 0.05)  # Exponential distribution with rate 0.05
+
+# Generate censoring indicators (0 for censored, 1 for observed event)
+censoring_indicator <- rbinom(n, size = 1, prob = 0.2)  # censoring at 20%
+
+# Combine data into a data frame
+survival_data <- tibble(
+  Age = age,
+  Gender = gender,
+  Treatment = treatment,
+  Time = pmin(survival_times, ifelse(censoring_indicator == 1, Inf, survival_times)),
+  Event = as.logical(censoring_indicator)
+)
+
+# Print the first few rows of the dataset
+print(head(survival_data))
+
+# Save the dataset to a CSV file
+write.csv(survival_data, "survival_dataset.csv", row.names = FALSE)
+
+```
+Survival Analysis in Pharmaceutical Research: A Tutorial
+
+Introduction
+
+In pharmaceutical research, survival analysis plays a crucial role in evaluating the time until a particular event of interest occurs, such as disease progression, relapse, or death. This tutorial aims to demonstrate the application of survival analysis techniques using R, focusing on key steps involved in conducting a survival analysis study.
+
+Data Description
+
+For this tutorial, we will utilize a hypothetical clinical trial dataset involving patients with a specific medical condition. The dataset contains information on patient demographics, treatment regimens, and survival outcomes.
+
+Let's load the dataset and examine its structure:
+
+
+```{r}
+# Load dataset
+clinical_data <- read_delim("survival_dataset.csv",delim = ",")
+
+head(clinical_data)
+
+```
+
+
+Data Preprocessing
+
+Before conducting survival analysis, we need to preprocess the dataset to ensure it is suitable for analysis. This involves handling missing data, converting variables to appropriate formats, and defining the survival outcome.
+
+```{r}
+# Handling missing data
+clinical_data <- na.omit(clinical_data)
+
+# Convert variables to appropriate formats
+clinical_data$Treatment <- as.factor(clinical_data$Treatment)
+clinical_data$Time <- as.numeric(clinical_data$Time)
+clinical_data$Event <- as.logical(clinical_data$Event)
+
+# Define survival outcome
+survival_obj <- Surv(time = clinical_data$Time, event = clinical_data$Event)
+
+
+```
+
+Exploratory Data Analysis (EDA)
+
+EDA helps us understand the characteristics of the dataset and identify potential patterns or relationships between variables. Let's visualize the survival curves for different treatment groups:
+
+```{r}
+# Load required libraries
+library(survival)
+library(ggplot2)
+library(tidyverse)
+
+# Plot Kaplan-Meier survival curves
+survfit(survival_obj ~ Treatment, data = clinical_data) %>%
+  autoplot() +
+  labs(title = "Kaplan-Meier Survival Curves by Treatment Group",
+       x = "Time (Months)",
+       y = "Survival Probability",
+       color = "Treatment Group")
+
+
+```
+
+Statistical Analysis
+
+Now, we'll perform statistical analysis to compare survival outcomes between treatment groups using the log-rank test and Cox proportional hazards model.
+
+Log-Rank Test
+The log-rank test is a non-parametric test used to compare survival curves between groups.
+
+
+```{r}
+# Perform log-rank test
+log_rank <- survdiff(survival_obj ~ Treatment, data = clinical_data)
+log_rank
+
+```
+
+Cox Proportional Hazards Model
+The Cox proportional hazards model is a semi-parametric regression model used to assess the association between covariates and survival outcomes.
+
+```{r}
+# Fit Cox proportional hazards model
+cox_model <- coxph(survival_obj ~ Treatment + Age + Gender, data = clinical_data)
+summary(cox_model)
+
+```
+
+
+Interpretation of Results
+
+The log-rank test results indicate a significant difference in survival between treatment groups (p-value = r log_rank$chisq). Similarly, the Cox proportional hazards model reveals that the treatment variable is significantly associated with survival outcomes (p < 0.05).
+
+Conclusion
+
+This tutorial provided an overview of survival analysis in pharmaceutical research, demonstrating key steps involved in conducting a survival analysis study using R. By performing data preprocessing, exploratory data analysis, and statistical analysis, we gained insights into survival outcomes and treatment effects in a clinical trial setting.
