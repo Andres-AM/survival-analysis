@@ -11,4 +11,6 @@ This project relies on the following R packages:
 - knitr: for dynamic report generation with RMarkdown
 - survival: for survival analysis, including Kaplan-Meier curves and Cox regression
 - ggsurvfit: for plotting survival curves using ggplot2 with the survival package
- 
+
+
+ ## Report link : https://andres-am.github.io/survival-analysis/
